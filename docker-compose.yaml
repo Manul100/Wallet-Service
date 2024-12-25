@@ -1,0 +1,52 @@
+networks:
+  wallet-service-network:
+    driver: bridge
+
+volumes:
+  pg_data:
+
+services:
+  wallet-service:
+    networks:
+      - wallet-service-network
+    depends_on:
+      - postgres
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/wallet_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1234
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
+    ports:
+      - "8080:8080"
+
+
+  postgres:
+    networks:
+      - wallet-service-network
+    image: 'postgres:latest'
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    command: postgres -c log_statement=all
+    restart: unless-stopped
+    volumes:
+      - ./infrastructure/db/create_db.sql:/docker-entrypoint-initdb.d/create_db.sql
+      - pg_data:/var/lib/postgresql/data
+
+
+#  liquibase:
+#    networks:
+#      - wallet-service-network
+#    image: liquibase/liquibase:latest
+#    depends_on:
+#      - postgres
+#    environment:
+#      LIQUIBASE_SEARCH_PATH: ./liquibase
+#    command: --defaults-file=/liquibase/liquibase.properties /liquibase/liquibase update
+#    volumes:
+#      - ./src/main/resources/db/changelog:/liquibase
